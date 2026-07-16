@@ -17,18 +17,12 @@ class TitanBot extends Client {
   constructor() {
     super({
       intents: [
-        
         GatewayIntentBits.Guilds,                        
         GatewayIntentBits.GuildMembers,                 
-        
-        
         GatewayIntentBits.GuildMessages,                
         GatewayIntentBits.GuildMessageReactions,        
         GatewayIntentBits.MessageContent,               
-        
         GatewayIntentBits.GuildVoiceStates,             
-        
-        
         GatewayIntentBits.GuildBans,                    
       ],
     });
@@ -110,6 +104,8 @@ class TitanBot extends Client {
     const host = process.env.WEB_HOST || '0.0.0.0';
     const corsOrigin = this.config.api?.cors?.origin || '*';
     
+    app.use(express.json()); // Added to easily parse dashboard payloads
+
     app.use((req, res, next) => {
       const allowedOrigins = Array.isArray(corsOrigin) ? corsOrigin : [corsOrigin];
       const origin = req.headers.origin;
@@ -117,7 +113,7 @@ class TitanBot extends Client {
       if (allowedOrigins.includes('*') || allowedOrigins.includes(origin)) {
         res.header('Access-Control-Allow-Origin', origin || '*');
       }
-      res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+      res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, PUT, DELETE');
       res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
       
       if (req.method === 'OPTIONS') {
@@ -149,6 +145,29 @@ class TitanBot extends Client {
       requestCounts.set(ip, times);
       next();
     });
+
+    // Make this bot instance accessible on every API request
+    app.use((req, res, next) => {
+      req.bot = this;
+      next();
+    });
+
+    // --- DASHBOARD API ROUTE INTEGRATION ---
+    // This allows dashboard API routes to safely interface with the Express server
+    try {
+      // If you have a separate dashboard routes file (e.g., dashboard.js), we dynamically load it here
+      import('./routes/dashboard.js').then((dashboardRoutes) => {
+        app.use('/api', dashboardRoutes.default || dashboardRoutes);
+        startupLog('✅ Dashboard API routes integrated successfully');
+      }).catch((err) => {
+        // Safe fallback if dashboard files aren't created yet
+        if (err.code !== 'ERR_MODULE_NOT_FOUND') {
+          logger.warn('⚠️ Dashboard routes failed to mount:', err.message);
+        }
+      });
+    } catch (err) {
+      // Fail silently if dashboard modules aren't yet available
+    }
 
     app.get('/health', (req, res) => {
       const dbStatus = this.db?.getStatus?.() || { isDegraded: 'unknown' };
@@ -258,7 +277,6 @@ class TitanBot extends Client {
           }
         }
         
-        // Save cleaned counters if any were orphaned
         if (orphanedCounters.length > 0) {
           await saveServerCounters(this, guildId, validCounters);
           logger.info(`Cleaned up ${orphanedCounters.length} orphaned counter(s) from guild ${guildId} during scheduled update`);
@@ -314,12 +332,10 @@ class TitanBot extends Client {
     logger.info(`${'='.repeat(60)}`);
 
     try {
-      
       logger.info('Stopping cron jobs...');
       cron.getTasks().forEach(task => task.stop());
       logger.info('✅ Cron jobs stopped');
 
-      // Close database connection
       if (this.db && this.db.db) {
         logger.info('Closing database connection...');
         try {
@@ -332,21 +348,18 @@ class TitanBot extends Client {
         }
       }
 
-      
       logger.info('Destroying Discord client...');
       if (this.isReady()) {
         try {
           this.destroy();
           logger.info('✅ Discord client destroyed');
         } catch (error) {
-          
-          
           logger.warn('Discord client destroy warning (non-critical):', error.message);
         }
       }
 
       logger.info('✅ Graceful shutdown complete');
-  shutdownLog('Bot stopped successfully.');
+      shutdownLog('Bot stopped successfully.');
       process.exit(0);
     } catch (error) {
       logger.error('Error during graceful shutdown:', error);
@@ -355,9 +368,10 @@ class TitanBot extends Client {
   }
 }
 
+// Instantiate and start the bot
+const bot = new TitanBot();
+
 try {
-  const bot = new TitanBot();
-  
   const setupShutdown = () => {
     process.on('SIGTERM', () => bot.shutdown('SIGTERM'));
     process.on('SIGINT', () => bot.shutdown('SIGINT'));
@@ -380,7 +394,6 @@ try {
   process.exit(1);
 }
 
-export default TitanBot;
-
-
-
+// Export BOTH the TitanBot class and the live running bot instance
+export { TitanBot, bot };
+export default bot;

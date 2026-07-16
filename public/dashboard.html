@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>rip_helper Dashboard</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <div class="dashboard-wrapper">
+        <header class="db-header">
+            <div class="profile-area">
+                <img id="user-avatar" class="avatar" src="https://cdn.discordapp.com/embed/avatars/0.png" alt="Profile Avatar">
+                <div>
+                    <h2 id="username">Loading...</h2>
+                    <p class="role-badge">Verified Administrator</p>
+                </div>
+            </div>
+            <a href="/api/auth/logout" class="logout-btn">Log Out</a>
+        </header>
+
+        <section class="stats-container">
+            <div class="stat-card">
+                <h3>Developer Current Level</h3>
+                <h1 id="user-level">0</h1>
+            </div>
+            <div class="stat-card">
+                <h3>Total Earned XP</h3>
+                <h1 id="user-xp">0</h1>
+            </div>
+            <div class="stat-card">
+                <h3>Economy Bank Balance</h3>
+                <h1 id="user-balance">$0</h1>
+            </div>
+        </section>
+    </div>
+
+    <script>
+        // Securely pull details from our backend API
+        fetch('/api/user/stats')
+            .then(res => {
+                if (res.status === 401 || res.status === 403) {
+                    window.location.href = '/index.html'; // Redirect to login on authentication fail
+                }
+                return res.json();
+            })
+            .then(data => {
+                document.getElementById('username').innerText = data.username;
+                document.getElementById('user-level').innerText = data.level;
+                document.getElementById('user-xp').innerText = data.xp;
+                document.getElementById('user-balance').innerText = `$${data.balance}`;
+                
+                if (data.avatar) {
+                    document.getElementById('user-avatar').src = `https://cdn.discordapp.com/avatars/${data.id}/${data.avatar}.png`;
+                }
+            })
+            .catch(err => {
+                console.error('Error contacting backend database APIs:', err);
+                window.location.href = '/index.html';
+            });
+    </script>
+</body>
+</html>
