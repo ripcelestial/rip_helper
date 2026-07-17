@@ -1,52 +1,36 @@
-// src/commands/utility/web-config.js
-const { SlashCommandBuilder, EmbedBuilder, PermissionFlagsBits } = require('discord.js');
+import { SlashCommandBuilder, PermissionFlagsBits } from 'discord.js';
 
-module.exports = {
+export default {
     data: new SlashCommandBuilder()
         .setName('web-config')
-        .setDescription('Retrieve the private link to the creator administrative portal.')
-        .setDefaultMemberPermissions(PermissionFlagsBits.Administrator), // Strictly limits to Administrators
+        .setDescription('Manage or view the web dashboard configuration link.')
+        .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild)
+        .setDMPermission(false),
 
     async execute(interaction) {
-        const ALLOWED_GUILD_ID = "YOUR_FRIENDS_SERVER_ID"; // Replace with your friend's target Discord Server ID
-        
-        // Security gate check
-        if (interaction.guildId !== ALLOWED_GUILD_ID) {
-            return interaction.reply({ 
-                content: "❌ Security Limit: This command is restricted to the main server installation.", 
-                ephemeral: true 
+        await interaction.deferReply({ ephemeral: true });
+
+        try {
+            const bot = interaction.client;
+            
+            // Derive hostname and ports seamlessly from environment configurations
+            const host = process.env.WEB_HOST || 'localhost';
+            const port = bot.config?.api?.port || process.env.PORT || 3000;
+            const dashboardUrl = `http://${host}:${port}/dashboard`;
+
+            await interaction.editReply({
+                content: `🌐 **TitanBot Web Dashboard**\n\nYou can configure server settings, view stats, and manage modules directly from the web panel.\n\n🔗 **Dashboard Link:** ${dashboardUrl}\n*Note: Ensure your account is logged in via Discord on the dashboard.*`
+            });
+        } catch (error) {
+            if (interaction.client.logger) {
+                interaction.client.logger.error(`Error running web-config command: ${error.message}`);
+            } else {
+                console.error(`Error running web-config command: ${error.message}`);
+            }
+            
+            await interaction.editReply({
+                content: '❌ Something went wrong while generating the configuration link.'
             });
         }
-
-        const dashboardUrl = `http://localhost:3000`; // Update with your Render URL (e.g., https://rip-helper.onrender.com) once deployed
-
-        const embed = new EmbedBuilder()
-            .setTitle('🔐 Creator Administration Access')
-            .setDescription('Click below to securely authenticate with your Discord developer credentials.')
-            .setColor('#a855f7')
-            .addFields(
-                { name: 'Private Gateway', value: 'Any unauthorized accounts attempt to access this web configuration portal will be automatically blocked.' }
-            )
-            .setFooter({ text: 'rip_helper Gateway Controller' })
-            .setTimestamp();
-
-        // Ephemeral ensures only the Administrator running the command can see this private response
-        await interaction.reply({
-            embeds: [embed],
-            components: [
-                {
-                    type: 1, // Action Row
-                    components: [
-                        {
-                            type: 2, // Button
-                            style: 5, // Link type
-                            label: 'Access Creator Dashboard',
-                            url: dashboardUrl
-                        }
-                    ]
-                }
-            ],
-            ephemeral: true 
-        });
     },
 };
