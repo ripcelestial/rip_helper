@@ -104,7 +104,7 @@ class TitanBot extends Client {
     const host = process.env.WEB_HOST || '0.0.0.0';
     const corsOrigin = this.config.api?.cors?.origin || '*';
     
-    app.use(express.json()); // Added to easily parse dashboard payloads
+    app.use(express.json()); 
 
     app.use((req, res, next) => {
       const allowedOrigins = Array.isArray(corsOrigin) ? corsOrigin : [corsOrigin];
@@ -146,27 +146,24 @@ class TitanBot extends Client {
       next();
     });
 
-    // Make this bot instance accessible on every API request
+    // Attach bot context to requests
     app.use((req, res, next) => {
       req.bot = this;
       next();
     });
 
-    // --- DASHBOARD API ROUTE INTEGRATION ---
-    // This allows dashboard API routes to safely interface with the Express server
+    // Mount Dashboard API Routes safely
     try {
-      // If you have a separate dashboard routes file (e.g., dashboard.js), we dynamically load it here
       import('./routes/dashboard.js').then((dashboardRoutes) => {
         app.use('/api', dashboardRoutes.default || dashboardRoutes);
         startupLog('✅ Dashboard API routes integrated successfully');
       }).catch((err) => {
-        // Safe fallback if dashboard files aren't created yet
         if (err.code !== 'ERR_MODULE_NOT_FOUND') {
           logger.warn('⚠️ Dashboard routes failed to mount:', err.message);
         }
       });
     } catch (err) {
-      // Fail silently if dashboard modules aren't yet available
+      // Fail silently if dashboard modules aren't available yet
     }
 
     app.get('/health', (req, res) => {
@@ -192,7 +189,7 @@ class TitanBot extends Client {
         return res.status(200).json({
           ready: true,
           message: 'Bot is ready'
-        });
+         });
       }
 
       res.status(503).json({
@@ -215,8 +212,6 @@ class TitanBot extends Client {
         hasStartedListening = true;
         this.webServer = server;
         startupLog(`✅ Web Server running on ${host}:${port}`);
-        startupLog(`Health endpoint: http://localhost:${port}/health`);
-        startupLog(`Ready endpoint: http://localhost:${port}/ready`);
       });
 
       server.on('error', (error) => {
@@ -368,7 +363,6 @@ class TitanBot extends Client {
   }
 }
 
-// Instantiate and start the bot
 const bot = new TitanBot();
 
 try {
@@ -394,6 +388,5 @@ try {
   process.exit(1);
 }
 
-// Export BOTH the TitanBot class and the live running bot instance
 export { TitanBot, bot };
 export default bot;
