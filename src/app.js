@@ -105,6 +105,7 @@ class TitanBot extends Client {
     const corsOrigin = this.config.api?.cors?.origin || '*';
     
     app.use(express.json()); 
+    app.use(express.static('public'));
 
     app.use((req, res, next) => {
       const allowedOrigins = Array.isArray(corsOrigin) ? corsOrigin : [corsOrigin];
