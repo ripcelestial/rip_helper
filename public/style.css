@@ -1,4 +1,4 @@
- /* Styling Framework */
+/* Styling Framework */
 * {
     margin: 0;
     padding: 0;
@@ -172,4 +172,134 @@ body::before {
     font-size: 32px;
     font-weight: 800;
     color: #fff;
+}
+/* ---- Dashboard: server picker & settings form (added for web dashboard) ---- */
+
+body.wide-page {
+    height: auto;
+    min-height: 100vh;
+    padding: 40px 0;
+}
+
+.status-message {
+    color: #94a3b8;
+    font-size: 14px;
+    margin-bottom: 16px;
+}
+
+.back-link {
+    color: #a855f7;
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 14px;
+    margin-right: 4px;
+}
+
+.back-link:hover {
+    text-decoration: underline;
+}
+
+.guild-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 16px;
+}
+
+.guild-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    background: rgba(30, 36, 56, 0.5);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 12px;
+    padding: 20px 12px;
+    text-decoration: none;
+    color: #e2e8f0;
+    transition: all 0.2s ease;
+    text-align: center;
+}
+
+.guild-card:hover {
+    border-color: #a855f7;
+    transform: translateY(-2px);
+}
+
+.guild-icon {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+.guild-name {
+    font-weight: 600;
+    font-size: 14px;
+    word-break: break-word;
+}
+
+.config-form {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.field-label {
+    font-size: 13px;
+    color: #94a3b8;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-weight: 600;
+    margin-top: 18px;
+}
+
+.field-select,
+.field-textarea {
+    background: rgba(13, 15, 23, 0.8);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: #e2e8f0;
+    padding: 10px 12px;
+    border-radius: 8px;
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+}
+
+.field-select:focus,
+.field-textarea:focus {
+    outline: none;
+    border-color: #a855f7;
+}
+
+.field-textarea {
+    resize: vertical;
+}
+
+.field-hint {
+    font-size: 12px;
+    color: #64748b;
+}
+
+.save-btn {
+    margin-top: 28px;
+    align-self: flex-start;
+    background-color: #5865F2;
+    color: #fff;
+    border: none;
+    padding: 12px 28px;
+    font-weight: 600;
+    font-size: 14px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background-color 0.2s ease, transform 0.1s ease;
+}
+
+.save-btn:hover {
+    background-color: #4752C4;
+    transform: translateY(-2px);
+}
+
+.save-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
 }
