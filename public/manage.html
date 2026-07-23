@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>rip_helper Dashboard - Select Server</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+</head>
+<body class="wide-page">
+
+    <div class="dashboard-wrapper" id="app">
+        <header class="db-header">
+            <div class="profile-area">
+                <img id="user-avatar" class="avatar" src="https://cdn.discordapp.com/embed/avatars/0.png" alt="Avatar">
+                <div>
+                    <h2 id="username">Loading...</h2>
+                    <p class="role-badge">Choose a server to manage</p>
+                </div>
+            </div>
+            <a href="/api/auth/logout" class="logout-btn">Log Out</a>
+        </header>
+
+        <p id="status-message" class="status-message"></p>
+
+        <section id="guild-grid" class="guild-grid"></section>
+    </div>
+
+    <script>
+        const guildGrid = document.getElementById('guild-grid');
+        const statusMessage = document.getElementById('status-message');
+
+        function showStatus(text) {
+            statusMessage.textContent = text;
+        }
+
+        function renderGuilds(guilds) {
+            guildGrid.innerHTML = '';
+
+            if (guilds.length === 0) {
+                showStatus("You don't manage any servers this bot is in. Ask a server owner to give you the Manage Server permission, or add the bot to your own server first.");
+                return;
+            }
+
+            showStatus('');
+
+            guilds.forEach((guild) => {
+                const card = document.createElement('a');
+                card.className = 'guild-card';
+                card.href = `guild-config.html?guild=${guild.id}`;
+
+                const iconSrc = guild.icon || 'https://cdn.discordapp.com/embed/avatars/0.png';
+
+                card.innerHTML = `
+                    <img class="guild-icon" src="${iconSrc}" alt="${guild.name}">
+                    <span class="guild-name">${guild.name}</span>
+                `;
+
+                guildGrid.appendChild(card);
+            });
+        }
+
+        async function init() {
+            try {
+                const meRes = await fetch('/api/auth/me');
+
+                if (meRes.status === 401) {
+                    window.location.href = '/api/auth/login';
+                    return;
+                }
+
+                const me = await meRes.json();
+                document.getElementById('username').textContent = me.username;
+
+                if (me.avatar) {
+                    document.getElementById('user-avatar').src =
+                        `https://cdn.discordapp.com/avatars/${me.userId}/${me.avatar}.png`;
+                }
+
+                showStatus('Loading your servers...');
+
+                const guildsRes = await fetch('/api/guilds');
+
+                if (!guildsRes.ok) {
+                    showStatus('Something went wrong loading your servers. Try refreshing the page.');
+                    return;
+                }
+
+                const data = await guildsRes.json();
+                renderGuilds(data.guilds || []);
+            } catch (err) {
+                console.error('Failed to load dashboard:', err);
+                showStatus('Something went wrong. Try refreshing the page.');
+            }
+        }
+
+        init();
+    </script>
+</body>
+</html>
