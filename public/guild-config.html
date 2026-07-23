@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>rip_helper Dashboard - Server Settings</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+</head>
+<body class="wide-page">
+
+    <div class="dashboard-wrapper" id="app">
+        <header class="db-header">
+            <div class="profile-area">
+                <a href="manage.html" class="back-link">&larr; All Servers</a>
+                <div>
+                    <h2 id="guild-name">Loading...</h2>
+                    <p class="role-badge">Server Settings</p>
+                </div>
+            </div>
+            <a href="/api/auth/logout" class="logout-btn">Log Out</a>
+        </header>
+
+        <p id="status-message" class="status-message"></p>
+
+        <form id="config-form" class="config-form" style="display: none;">
+
+            <label class="field-label" for="welcome-channel">Welcome Channel</label>
+            <select id="welcome-channel" class="field-select">
+                <option value="">-- None --</option>
+            </select>
+
+            <label class="field-label" for="welcome-message">Welcome Message</label>
+            <textarea id="welcome-message" class="field-textarea" rows="3" placeholder="Welcome {user} to {server}!"></textarea>
+            <p class="field-hint">You can use {user} and {server} as placeholders.</p>
+
+            <label class="field-label" for="mod-role">Mod Role</label>
+            <select id="mod-role" class="field-select">
+                <option value="">-- None --</option>
+            </select>
+
+            <label class="field-label" for="admin-role">Admin Role</label>
+            <select id="admin-role" class="field-select">
+                <option value="">-- None --</option>
+            </select>
+
+            <label class="field-label" for="log-channel">Log Channel</label>
+            <select id="log-channel" class="field-select">
+                <option value="">-- None --</option>
+            </select>
+
+            <button type="submit" class="save-btn" id="save-btn">Save Changes</button>
+        </form>
+    </div>
+
+    <script>
+        const params = new URLSearchParams(window.location.search);
+        const guildId = params.get('guild');
+
+        const statusMessage = document.getElementById('status-message');
+        const form = document.getElementById('config-form');
+        const saveBtn = document.getElementById('save-btn');
+
+        function showStatus(text, isError = false) {
+            statusMessage.textContent = text;
+            statusMessage.style.color = isError ? '#ef4444' : '#94a3b8';
+        }
+
+        function fillSelect(selectEl, items, currentValue) {
+            items.forEach((item) => {
+                const option = document.createElement('option');
+                option.value = item.id;
+                option.textContent = item.name;
+                if (item.id === currentValue) option.selected = true;
+                selectEl.appendChild(option);
+            });
+        }
+
+        async function init() {
+            if (!guildId) {
+                showStatus('No server was specified. Go back and pick one from the list.', true);
+                return;
+            }
+
+            try {
+                const meRes = await fetch('/api/auth/me');
+                if (meRes.status === 401) {
+                    window.location.href = '/api/auth/login';
+                    return;
+                }
+
+                showStatus('Loading server settings...');
+
+                const [configRes, channelsRes, rolesRes] = await Promise.all([
+                    fetch(`/api/guilds/${guildId}/config`),
+                    fetch(`/api/guilds/${guildId}/channels`),
+                    fetch(`/api/guilds/${guildId}/roles`)
+                ]);
+
+                if (configRes.status === 403 || channelsRes.status === 403 || rolesRes.status === 403) {
+                    showStatus("You don't have permission to manage this server.", true);
+                    return;
+                }
+
+                if (configRes.status === 404) {
+                    showStatus('That server was not found, or the bot is not in it.', true);
+                    return;
+                }
+
+                if (!configRes.ok || !channelsRes.ok || !rolesRes.ok) {
+                    showStatus('Something went wrong loading this server. Try refreshing the page.', true);
+                    return;
+                }
+
+                const config = await configRes.json();
+                const { channels } = await channelsRes.json();
+                const { roles } = await rolesRes.json();
+
+                document.getElementById('guild-name').textContent = 'Server Settings';
+
+                fillSelect(document.getElementById('welcome-channel'), channels, config.welcomeChannel);
+                fillSelect(document.getElementById('mod-role'), roles, config.modRole);
+                fillSelect(document.getElementById('admin-role'), roles, config.adminRole);
+                fillSelect(document.getElementById('log-channel'), channels, config.logChannelId);
+
+                document.getElementById('welcome-message').value = config.welcomeMessage || '';
+
+                form.style.display = 'flex';
+                showStatus('');
+            } catch (err) {
+                console.error('Failed to load server settings:', err);
+                showStatus('Something went wrong. Try refreshing the page.', true);
+            }
+        }
+
+        form.addEventListener('submit', async (event) => {
+            event.preventDefault();
+            saveBtn.disabled = true;
+            saveBtn.textContent = 'Saving...';
+
+            const payload = {
+                welcomeChannel: document.getElementById('welcome-channel').value || null,
+                welcomeMessage: document.getElementById('welcome-message').value,
+                modRole: document.getElementById('mod-role').value || null,
+                adminRole: document.getElementById('admin-role').value || null,
+                logChannelId: document.getElementById('log-channel').value || null
+            };
+
+            try {
+                const res = await fetch(`/api/guilds/${guildId}/config`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!res.ok) {
+                    const data = await res.json().catch(() => ({}));
+                    showStatus(data.error || 'Failed to save. Try again.', true);
+                    return;
+                }
+
+                showStatus('Saved!');
+            } catch (err) {
+                console.error('Failed to save settings:', err);
+                showStatus('Something went wrong while saving. Try again.', true);
+            } finally {
+                saveBtn.disabled = false;
+                saveBtn.textContent = 'Save Changes';
+            }
+        });
+
+        init();
+    </script>
+</body>
+</html>
