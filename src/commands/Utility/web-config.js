@@ -43,7 +43,7 @@ export default {
                 return;
             }
 
-            const baseUrl = process.env.DASHBOARD_URL || 'https://samurai-manager.onrender.com';
+            const baseUrl = process.env.DASHBOARD_URL || 'https://rip-helper.onrender.com';
             const dashboardUrl = `${baseUrl}/manage.html`;
 
             await interaction.editReply({
