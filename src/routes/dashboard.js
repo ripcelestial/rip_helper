@@ -2,7 +2,8 @@ import express from 'express';
 import { PermissionsBitField } from 'discord.js';
 import authRouter from './auth.js';
 import { requireAuth } from '../utils/session.js';
-import { getGuildConfig, updateGuildConfig } from '../services/guildConfig.js';
+import { getGuildConfig } from '../services/guildConfig.js';
+import ConfigService from '../services/configService.js';
 import logger from '../utils/logger.js';
 
 const router = express.Router();
@@ -76,17 +77,36 @@ router.get('/guilds', requireAuth, async (req, res) => {
     }
 });
 
+// Every field the dashboard is allowed to read/write, grouped by
+// the section it belongs to on the settings page.
+const CONFIG_FIELDS = [
+    'prefix',
+    'modRole',
+    'adminRole',
+    'autoRole',
+    'premiumRoleId',
+    'logChannelId',
+    'reportChannelId',
+    'welcomeChannel',
+    'welcomeMessage',
+    'birthdayChannelId',
+    'maxTicketsPerUser',
+    'dmOnClose'
+];
+
 router.get('/guilds/:guildId/config', requireAuth, requireGuildAccess, async (req, res) => {
     try {
         const config = await getGuildConfig(req.bot, req.guild.id);
+        const result = {};
 
-        res.json({
-            modRole: config.modRole || null,
-            adminRole: config.adminRole || null,
-            logChannelId: config.logChannelId || null,
-            welcomeChannel: config.welcomeChannel || null,
-            welcomeMessage: config.welcomeMessage || ''
-        });
+        for (const field of CONFIG_FIELDS) {
+            result[field] = config[field] ?? null;
+        }
+
+        // These two have friendlier defaults than a bare null.
+        if (!result.welcomeMessage) result.welcomeMessage = '';
+
+        res.json(result);
     } catch (error) {
         logger.error(`Failed to load config for guild ${req.guild.id}: ${error.message}`);
         res.status(500).json({ error: 'Failed to load server configuration.' });
@@ -95,17 +115,31 @@ router.get('/guilds/:guildId/config', requireAuth, requireGuildAccess, async (re
 
 router.patch('/guilds/:guildId/config', requireAuth, requireGuildAccess, async (req, res) => {
     try {
-        const { modRole, adminRole, logChannelId, welcomeChannel, welcomeMessage } = req.body || {};
+        const body = req.body || {};
         const updates = {};
 
-        if (modRole !== undefined) updates.modRole = modRole || null;
-        if (adminRole !== undefined) updates.adminRole = adminRole || null;
-        if (logChannelId !== undefined) updates.logChannelId = logChannelId || null;
-        if (welcomeChannel !== undefined) updates.welcomeChannel = welcomeChannel || null;
-        if (welcomeMessage !== undefined) updates.welcomeMessage = welcomeMessage;
+        // Only pass along fields the dashboard actually sent, and only
+        // ones we recognize — never let the request body write arbitrary keys.
+        for (const field of CONFIG_FIELDS) {
+            if (body[field] === undefined) continue;
 
-        const saved = await updateGuildConfig(req.bot, req.guild.id, updates);
-        res.json({ success: true, config: saved });
+            if (field === 'dmOnClose') {
+                updates[field] = Boolean(body[field]);
+            } else if (field === 'maxTicketsPerUser') {
+                const num = Number(body[field]);
+                if (!Number.isNaN(num)) updates[field] = num;
+            } else if (field === 'welcomeMessage') {
+                updates[field] = body[field];
+            } else {
+                updates[field] = body[field] || null;
+            }
+        }
+
+        // ConfigService.bulkUpdate does the real validation: checks channels/roles
+        // actually exist, roles aren't above the bot's own highest role, prefix
+        // length, ticket limits, etc. — the same checks the slash commands use.
+        const result = await ConfigService.bulkUpdate(req.bot, req.guild.id, updates, req.session.userId);
+        res.json({ success: true, applied: result.applied });
     } catch (error) {
         logger.error(`Failed to update config for guild ${req.guild.id}: ${error.message}`);
         res.status(400).json({ error: error.userMessage || 'Failed to save server configuration.' });
