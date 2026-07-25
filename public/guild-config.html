@@ -14,8 +14,8 @@
             <div class="profile-area">
                 <a href="manage.html" class="back-link">&larr; All Servers</a>
                 <div>
-                    <h2 id="guild-name">Loading...</h2>
-                    <p class="role-badge">Server Settings</p>
+                    <h2 id="guild-name">Server Settings</h2>
+                    <p class="role-badge">Changes save per-section</p>
                 </div>
             </div>
             <a href="/api/auth/logout" class="logout-btn">Log Out</a>
@@ -25,29 +25,70 @@
 
         <form id="config-form" class="config-form" style="display: none;">
 
-            <label class="field-label" for="welcome-channel">Welcome Channel</label>
-            <select id="welcome-channel" class="field-select">
-                <option value="">-- None --</option>
-            </select>
+            <!-- ===== General ===== -->
+            <section class="settings-section">
+                <h3 class="section-title">General</h3>
 
-            <label class="field-label" for="welcome-message">Welcome Message</label>
-            <textarea id="welcome-message" class="field-textarea" rows="3" placeholder="Welcome {user} to {server}!"></textarea>
-            <p class="field-hint">You can use {user} and {server} as placeholders.</p>
+                <label class="field-label" for="prefix">Command Prefix</label>
+                <input type="text" id="prefix" class="field-select" maxlength="10" placeholder="!">
+                <p class="field-hint">Used for text-based commands (slash commands always work regardless).</p>
 
-            <label class="field-label" for="mod-role">Mod Role</label>
-            <select id="mod-role" class="field-select">
-                <option value="">-- None --</option>
-            </select>
+                <label class="field-label" for="auto-role">Auto Role <span class="field-hint-inline">(given to new members automatically)</span></label>
+                <select id="auto-role" class="field-select"><option value="">-- None --</option></select>
 
-            <label class="field-label" for="admin-role">Admin Role</label>
-            <select id="admin-role" class="field-select">
-                <option value="">-- None --</option>
-            </select>
+                <label class="field-label" for="premium-role">Premium Role</label>
+                <select id="premium-role" class="field-select"><option value="">-- None --</option></select>
+            </section>
 
-            <label class="field-label" for="log-channel">Log Channel</label>
-            <select id="log-channel" class="field-select">
-                <option value="">-- None --</option>
-            </select>
+            <!-- ===== Moderation & Logging ===== -->
+            <section class="settings-section">
+                <h3 class="section-title">Moderation &amp; Logging</h3>
+
+                <label class="field-label" for="mod-role">Mod Role</label>
+                <select id="mod-role" class="field-select"><option value="">-- None --</option></select>
+
+                <label class="field-label" for="admin-role">Admin Role</label>
+                <select id="admin-role" class="field-select"><option value="">-- None --</option></select>
+
+                <label class="field-label" for="log-channel">Log Channel</label>
+                <select id="log-channel" class="field-select"><option value="">-- None --</option></select>
+
+                <label class="field-label" for="report-channel">Report Channel</label>
+                <select id="report-channel" class="field-select"><option value="">-- None --</option></select>
+            </section>
+
+            <!-- ===== Welcome ===== -->
+            <section class="settings-section">
+                <h3 class="section-title">Welcome</h3>
+
+                <label class="field-label" for="welcome-channel">Welcome Channel</label>
+                <select id="welcome-channel" class="field-select"><option value="">-- None --</option></select>
+
+                <label class="field-label" for="welcome-message">Welcome Message</label>
+                <textarea id="welcome-message" class="field-textarea" rows="3" placeholder="Welcome {user} to {server}!"></textarea>
+                <p class="field-hint">You can use {user} and {server} as placeholders.</p>
+            </section>
+
+            <!-- ===== Tickets ===== -->
+            <section class="settings-section">
+                <h3 class="section-title">Tickets</h3>
+
+                <label class="field-label" for="max-tickets">Max Open Tickets Per User</label>
+                <input type="number" id="max-tickets" class="field-select" min="1" max="50" placeholder="1">
+
+                <label class="field-checkbox-label">
+                    <input type="checkbox" id="dm-on-close">
+                    DM the user a transcript when their ticket is closed
+                </label>
+            </section>
+
+            <!-- ===== Birthdays ===== -->
+            <section class="settings-section">
+                <h3 class="section-title">Birthdays</h3>
+
+                <label class="field-label" for="birthday-channel">Birthday Announcement Channel</label>
+                <select id="birthday-channel" class="field-select"><option value="">-- None --</option></select>
+            </section>
 
             <button type="submit" class="save-btn" id="save-btn">Save Changes</button>
         </form>
@@ -116,14 +157,27 @@
                 const { channels } = await channelsRes.json();
                 const { roles } = await rolesRes.json();
 
-                document.getElementById('guild-name').textContent = 'Server Settings';
+                // General
+                document.getElementById('prefix').value = config.prefix || '';
+                fillSelect(document.getElementById('auto-role'), roles, config.autoRole);
+                fillSelect(document.getElementById('premium-role'), roles, config.premiumRoleId);
 
-                fillSelect(document.getElementById('welcome-channel'), channels, config.welcomeChannel);
+                // Moderation & Logging
                 fillSelect(document.getElementById('mod-role'), roles, config.modRole);
                 fillSelect(document.getElementById('admin-role'), roles, config.adminRole);
                 fillSelect(document.getElementById('log-channel'), channels, config.logChannelId);
+                fillSelect(document.getElementById('report-channel'), channels, config.reportChannelId);
 
+                // Welcome
+                fillSelect(document.getElementById('welcome-channel'), channels, config.welcomeChannel);
                 document.getElementById('welcome-message').value = config.welcomeMessage || '';
+
+                // Tickets
+                document.getElementById('max-tickets').value = config.maxTicketsPerUser || '';
+                document.getElementById('dm-on-close').checked = Boolean(config.dmOnClose);
+
+                // Birthdays
+                fillSelect(document.getElementById('birthday-channel'), channels, config.birthdayChannelId);
 
                 form.style.display = 'flex';
                 showStatus('');
@@ -139,11 +193,24 @@
             saveBtn.textContent = 'Saving...';
 
             const payload = {
-                welcomeChannel: document.getElementById('welcome-channel').value || null,
-                welcomeMessage: document.getElementById('welcome-message').value,
+                prefix: document.getElementById('prefix').value || null,
+                autoRole: document.getElementById('auto-role').value || null,
+                premiumRoleId: document.getElementById('premium-role').value || null,
+
                 modRole: document.getElementById('mod-role').value || null,
                 adminRole: document.getElementById('admin-role').value || null,
-                logChannelId: document.getElementById('log-channel').value || null
+                logChannelId: document.getElementById('log-channel').value || null,
+                reportChannelId: document.getElementById('report-channel').value || null,
+
+                welcomeChannel: document.getElementById('welcome-channel').value || null,
+                welcomeMessage: document.getElementById('welcome-message').value,
+
+                maxTicketsPerUser: document.getElementById('max-tickets').value
+                    ? Number(document.getElementById('max-tickets').value)
+                    : null,
+                dmOnClose: document.getElementById('dm-on-close').checked,
+
+                birthdayChannelId: document.getElementById('birthday-channel').value || null
             };
 
             try {
