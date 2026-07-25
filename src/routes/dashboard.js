@@ -91,7 +91,12 @@ const CONFIG_FIELDS = [
     'welcomeMessage',
     'birthdayChannelId',
     'maxTicketsPerUser',
-    'dmOnClose'
+    'dmOnClose',
+    'muteRoleId',
+    'warnMuteThreshold',
+    'warnMuteDurationMinutes',
+    'warnKickThreshold',
+    'warnBanThreshold'
 ];
 
 router.get('/guilds/:guildId/config', requireAuth, requireGuildAccess, async (req, res) => {
@@ -120,14 +125,26 @@ router.patch('/guilds/:guildId/config', requireAuth, requireGuildAccess, async (
 
         // Only pass along fields the dashboard actually sent, and only
         // ones we recognize — never let the request body write arbitrary keys.
+        const numberFields = new Set([
+            'maxTicketsPerUser',
+            'warnMuteThreshold',
+            'warnMuteDurationMinutes',
+            'warnKickThreshold',
+            'warnBanThreshold'
+        ]);
+
         for (const field of CONFIG_FIELDS) {
             if (body[field] === undefined) continue;
 
             if (field === 'dmOnClose') {
                 updates[field] = Boolean(body[field]);
-            } else if (field === 'maxTicketsPerUser') {
-                const num = Number(body[field]);
-                if (!Number.isNaN(num)) updates[field] = num;
+            } else if (numberFields.has(field)) {
+                if (body[field] === '' || body[field] === null) {
+                    updates[field] = null;
+                } else {
+                    const num = Number(body[field]);
+                    if (!Number.isNaN(num)) updates[field] = num;
+                }
             } else if (field === 'welcomeMessage') {
                 updates[field] = body[field];
             } else {
