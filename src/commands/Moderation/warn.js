@@ -3,6 +3,7 @@ import { createEmbed, errorEmbed, successEmbed, infoEmbed, warningEmbed } from '
 import { logModerationAction } from '../../utils/moderation.js';
 import { logger } from '../../utils/logger.js';
 import { WarningService } from '../../services/warningService.js';
+import { applyWarnThresholdPunishment } from '../../services/warnAutoPunish.js';
 import { handleInteractionError } from '../../utils/errorHandler.js';
 import { InteractionHelper } from '../../utils/interactionHelper.js';
 export default {
@@ -65,6 +66,14 @@ export default {
 
                 const totalWarns = result.totalCount;
 
+                const autoPunish = await applyWarnThresholdPunishment({
+                    guild: interaction.guild,
+                    member,
+                    target,
+                    totalWarns,
+                    config
+                });
+
                 await logModerationAction({
                     client,
                     guild: interaction.guild,
@@ -78,16 +87,21 @@ export default {
                             moderatorId: moderator.id,
                             totalWarns,
                             warningNumber: totalWarns,
-                            warningId: result.id
+                            warningId: result.id,
+                            autoPunishment: autoPunish.applied ? autoPunish.action : null
                         }
                     }
                 });
+
+                const autoPunishNote = autoPunish.applied
+                    ? `\n🔨 **Auto-punishment triggered:** ${autoPunish.action} (reached the configured threshold)`
+                    : '';
 
                 await InteractionHelper.safeEditReply(interaction, {
                     embeds: [
                         successEmbed(
                             `⚠️ **Warned** ${target.tag}`,
-                            `**Reason:** ${reason}\n**Total Warns:** ${totalWarns}`,
+                            `**Reason:** ${reason}\n**Total Warns:** ${totalWarns}${autoPunishNote}`,
                         ),
                     ],
                 });
@@ -97,6 +111,3 @@ export default {
         }
     }
 };
-
-
-
