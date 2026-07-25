@@ -55,6 +55,27 @@
 
                 <label class="field-label" for="report-channel">Report Channel</label>
                 <select id="report-channel" class="field-select"><option value="">-- None --</option></select>
+
+                <label class="field-label" for="mute-role">Mute Role <span class="field-hint-inline">(used for manual mutes; auto-mute below uses Discord timeout instead)</span></label>
+                <select id="mute-role" class="field-select"><option value="">-- None --</option></select>
+            </section>
+
+            <!-- ===== Warning Escalation ===== -->
+            <section class="settings-section">
+                <h3 class="section-title">Warning Escalation</h3>
+                <p class="field-hint">Leave a threshold empty to turn that auto-punishment off. When a user's warning count reaches a threshold, that action happens automatically.</p>
+
+                <label class="field-label" for="warn-mute-threshold">Warnings Before Auto-Mute</label>
+                <input type="number" id="warn-mute-threshold" class="field-select" min="1" placeholder="e.g. 3">
+
+                <label class="field-label" for="warn-mute-duration">Auto-Mute Duration (minutes)</label>
+                <input type="number" id="warn-mute-duration" class="field-select" min="1" placeholder="60">
+
+                <label class="field-label" for="warn-kick-threshold">Warnings Before Auto-Kick</label>
+                <input type="number" id="warn-kick-threshold" class="field-select" min="1" placeholder="e.g. 5">
+
+                <label class="field-label" for="warn-ban-threshold">Warnings Before Auto-Ban</label>
+                <input type="number" id="warn-ban-threshold" class="field-select" min="1" placeholder="e.g. 7">
             </section>
 
             <!-- ===== Welcome ===== -->
@@ -167,6 +188,13 @@
                 fillSelect(document.getElementById('admin-role'), roles, config.adminRole);
                 fillSelect(document.getElementById('log-channel'), channels, config.logChannelId);
                 fillSelect(document.getElementById('report-channel'), channels, config.reportChannelId);
+                fillSelect(document.getElementById('mute-role'), roles, config.muteRoleId);
+
+                // Warning Escalation
+                document.getElementById('warn-mute-threshold').value = config.warnMuteThreshold || '';
+                document.getElementById('warn-mute-duration').value = config.warnMuteDurationMinutes || '';
+                document.getElementById('warn-kick-threshold').value = config.warnKickThreshold || '';
+                document.getElementById('warn-ban-threshold').value = config.warnBanThreshold || '';
 
                 // Welcome
                 fillSelect(document.getElementById('welcome-channel'), channels, config.welcomeChannel);
@@ -201,6 +229,12 @@
                 adminRole: document.getElementById('admin-role').value || null,
                 logChannelId: document.getElementById('log-channel').value || null,
                 reportChannelId: document.getElementById('report-channel').value || null,
+                muteRoleId: document.getElementById('mute-role').value || null,
+
+                warnMuteThreshold: document.getElementById('warn-mute-threshold').value || null,
+                warnMuteDurationMinutes: document.getElementById('warn-mute-duration').value || null,
+                warnKickThreshold: document.getElementById('warn-kick-threshold').value || null,
+                warnBanThreshold: document.getElementById('warn-ban-threshold').value || null,
 
                 welcomeChannel: document.getElementById('welcome-channel').value || null,
                 welcomeMessage: document.getElementById('welcome-message').value,
