@@ -17,14 +17,15 @@ const GUILD_CONFIG_DEFAULTS = {
         enabled: false,
         channelId: null,
         enabledEvents: {}
-    }
+    },
+    // Warning escalation (auto-punishment after N warnings). A threshold of
+    // null/0 means "don't auto-apply this punishment".
+    muteRoleId: null,
+    warnMuteThreshold: null,
+    warnMuteDurationMinutes: 60,
+    warnKickThreshold: null,
+    warnBanThreshold: null
 };
-
-
-
-
-
-
 
 export const getGuildConfig = wrapServiceBoundary(async function getGuildConfig(client, guildId, context = {}) {
     const config = await getGuildConfigDb(client, guildId, context);
@@ -37,13 +38,6 @@ export const getGuildConfig = wrapServiceBoundary(async function getGuildConfig(
     userMessage: 'Failed to load server configuration. Please try again.'
 });
 
-
-
-
-
-
-
-
 export const setGuildConfig = wrapServiceBoundary(async function setGuildConfig(client, guildId, config, context = {}) {
     const normalized = normalizeGuildConfig(config, GUILD_CONFIG_DEFAULTS);
     const validated = validateGuildConfigOrThrow(normalized, { guildId, ...context });
@@ -54,13 +48,6 @@ export const setGuildConfig = wrapServiceBoundary(async function setGuildConfig(
     message: 'Failed to save guild configuration',
     userMessage: 'Failed to save server configuration. Please try again.'
 });
-
-
-
-
-
-
-
 
 export const updateGuildConfig = wrapServiceBoundary(async function updateGuildConfig(client, guildId, updates, context = {}) {
     const currentConfig = await getGuildConfigDb(client, guildId, context);
@@ -75,14 +62,6 @@ export const updateGuildConfig = wrapServiceBoundary(async function updateGuildC
     userMessage: 'Failed to update server configuration. Please try again.'
 });
 
-
-
-
-
-
-
-
-
 export const getConfigValue = wrapServiceBoundary(async function getConfigValue(client, guildId, key, defaultValue = null, context = {}) {
     const config = await getGuildConfig(client, guildId, context);
     return config[key] !== undefined ? config[key] : defaultValue;
@@ -93,14 +72,6 @@ export const getConfigValue = wrapServiceBoundary(async function getConfigValue(
     userMessage: 'Failed to read a server setting. Please try again.'
 });
 
-
-
-
-
-
-
-
-
 export const setConfigValue = wrapServiceBoundary(async function setConfigValue(client, guildId, key, value, context = {}) {
     return await updateGuildConfig(client, guildId, { [key]: value }, context);
 }, {
@@ -109,5 +80,3 @@ export const setConfigValue = wrapServiceBoundary(async function setConfigValue(
     message: 'Failed to update guild configuration value',
     userMessage: 'Failed to update a server setting. Please try again.'
 });
-
-
