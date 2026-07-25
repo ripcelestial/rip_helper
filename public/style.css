@@ -179,7 +179,10 @@ body.wide-page {
     height: auto;
     min-height: 100vh;
     padding: 40px 0;
+    overflow-y: auto;
+    align-items: flex-start;
 }
+
 
 .status-message {
     color: #94a3b8;
